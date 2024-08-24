@@ -1,5 +1,12 @@
 import { GraphQLError } from "graphql";
-import { getJobs, getJob, getJobsByCompany } from "./db/jobs.js";
+import {
+  getJobs,
+  getJob,
+  getJobsByCompany,
+  createJob,
+  deleteJob,
+  updateJob,
+} from "./db/jobs.js";
 import { getCompany } from "./db/companies.js";
 
 export const resolvers = {
@@ -7,7 +14,7 @@ export const resolvers = {
     job: async (_root, { id }) => {
       const job = await getJob(id);
       if (!job) {
-        notFoundError("No job found with id " + id);
+        throw notFoundError("No job found with id " + id);
       }
       return job;
     },
@@ -15,9 +22,47 @@ export const resolvers = {
     company: async (_root, { id }) => {
       const company = await getCompany(id);
       if (!company) {
-        notFoundError("No company found with id " + id);
+        throw notFoundError("No company found with id " + id);
       }
       return company;
+    },
+  },
+
+  Mutation: {
+    createJob: (_root, { input: { title, description } }, { user }) => {
+      if (!user) {
+        throw unauthorizedError("Missing authentication");
+      }
+      return createJob({ companyId: user.companyId, title, description });
+    },
+    deleteJob: async (_root, { id }, { user }) => {
+      if (!user) {
+        throw unauthorizedError("Missing authentication");
+      }
+      const job = await deleteJob(id, user.companyId);
+      if (!job) {
+        throw notFoundError("No job found with id " + id);
+      }
+      return job;
+    },
+    updateJob: async (
+      _root,
+      { input: { id, title, description } },
+      { user }
+    ) => {
+      if (!user) {
+        throw unauthorizedError("Missing authentication");
+      }
+      const job = updateJob({
+        id,
+        companyId: user.companyId,
+        title,
+        description,
+      });
+      if (!job) {
+        throw notFoundError("No job found with id " + id);
+      }
+      return job;
     },
   },
 
@@ -36,7 +81,13 @@ function toIsoDate(value) {
 }
 
 function notFoundError(message) {
-  throw new GraphQLError(message, {
+  return new GraphQLError(message, {
     extensions: { code: "NOT_FOUND" },
+  });
+}
+
+function unauthorizedError(message) {
+  return new GraphQLError(message, {
+    extensions: { code: "UNAUTHORIZED" },
   });
 }
