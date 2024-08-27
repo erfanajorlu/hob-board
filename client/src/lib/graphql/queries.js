@@ -1,13 +1,20 @@
-import { ApolloClient, ApolloLink, concat, createHttpLink, gql, InMemoryCache } from '@apollo/client';
-import { getAccessToken } from '../auth';
+import {
+  ApolloClient,
+  ApolloLink,
+  concat,
+  createHttpLink,
+  gql,
+  InMemoryCache,
+} from "@apollo/client";
+import { getAccessToken } from "../auth";
 
-const httpLink = createHttpLink({ uri: 'http://localhost:9000/graphql' });
+const httpLink = createHttpLink({ uri: "http://localhost:9000/graphql" });
 
 const authLink = new ApolloLink((operation, forward) => {
   const accessToken = getAccessToken();
   if (accessToken) {
     operation.setContext({
-      headers: { 'Authorization': `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
   }
   return forward(operation);
@@ -56,15 +63,18 @@ export const jobByIdQuery = gql`
 `;
 
 export const jobsQuery = gql`
-  query Jobs {
-    jobs {
-      id
-      date
-      title
-      company {
+  query Jobs($limit: Int, $offset: Int) {
+    jobs(limit: $limit, offset: $offset) {
+      items {
         id
-        name
+        date
+        title
+        company {
+          id
+          name
+        }
       }
+    totalCount
     }
   }
 `;
