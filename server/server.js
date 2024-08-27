@@ -5,10 +5,8 @@ import express from "express";
 import { readFile } from "node:fs/promises";
 import { authMiddleware, handleLogin } from "./auth.js";
 import { resolvers } from "./resolvers.js";
-import {
-  ApolloServerPluginLandingPageGraphQLPlayground,
-  ApolloServerPluginLandingPageDisabled,
-} from "apollo-server-core";
+import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
+import { createCompanyLoader } from "./db/companies.js";
 import { getUser } from "./db/users.js";
 
 const PORT = 9000;
@@ -21,11 +19,13 @@ app.post("/login", handleLogin);
 const typeDefs = await readFile("./schema.graphql", "utf-8");
 
 async function getContext({ req }) {
-  if (req.auth) {    
-    const user = await getUser(req.auth.sub);
+  const companyLoader = createCompanyLoader();
+  const context = { companyLoader };
+  if (req.auth) {
+    context.user = await getUser(req.auth.sub);
     return { user };
   }
-  return {};
+  return context;
 }
 
 const apolloServer = new ApolloServer({
